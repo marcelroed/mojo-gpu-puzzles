@@ -28,6 +28,37 @@ fn conv_1d_simple[
     local_i = Int(thread_idx.x)
     # FILL ME IN (roughly 14 lines)
 
+    global_i = block_dim.x * block_idx.x + thread_idx.x
+    local_i = thread_idx.x
+    shared_a = LayoutTensor[
+        dtype,
+        Layout.row_major(SIZE),
+        MutableAnyOrigin,
+        address_space = AddressSpace.SHARED,
+    ].stack_allocation()
+    shared_b = LayoutTensor[
+        dtype,
+        Layout.row_major(CONV),
+        MutableAnyOrigin,
+        address_space = AddressSpace.SHARED,
+    ].stack_allocation()
+
+    if global_i < SIZE:
+        shared_a[local_i] = a[global_i]
+
+    if global_i < CONV:
+        shared_b[local_i] = b[global_i]
+
+    barrier()
+
+    running_sum = Scalar[dtype](0.0)
+    for j in range(CONV):
+        if local_i + j < SIZE:
+            running_sum += rebind[Scalar[dtype]](
+                shared_a[local_i + j] * shared_b[j]
+            )
+    output[global_i] = running_sum
+
 
 # ANCHOR_END: conv_1d_simple
 
@@ -51,6 +82,39 @@ fn conv_1d_block_boundary[
     global_i = Int(block_dim.x * block_idx.x + thread_idx.x)
     local_i = Int(thread_idx.x)
     # FILL ME IN (roughly 18 lines)
+
+    shared_a = LayoutTensor[
+        dtype,
+        Layout.row_major(TPB + CONV_2 - 1),
+        MutableAnyOrigin,
+        address_space = AddressSpace.SHARED,
+    ].stack_allocation()
+
+    shared_b = LayoutTensor[
+        dtype,
+        Layout.row_major(CONV_2),
+        MutableAnyOrigin,
+        address_space = AddressSpace.SHARED,
+    ].stack_allocation()
+
+    shared_a[local_i] = a[global_i]
+    if local_i < CONV_2 - 1:
+        # Some threads also need to load the next block's data
+        shared_a[local_i + block_dim.x] = a[global_i + block_dim.x]
+
+    if local_i < CONV_2:
+        shared_b[local_i] = b[local_i]
+
+    barrier()
+
+    running_sum = Scalar[dtype](0.0)
+    for j in range(CONV_2):
+        if global_i + j < SIZE_2:
+            running_sum += rebind[Scalar[dtype]](
+                shared_a[local_i + j] * shared_b[j]
+            )
+
+    output[global_i] = running_sum
 
 
 # ANCHOR_END: conv_1d_block_boundary

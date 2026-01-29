@@ -27,6 +27,9 @@ fn broadcast_add[
     col = thread_idx.x
     # FILL ME IN (roughly 2 lines)
 
+    if row < size and col < size:
+        output[row, col] = a[0, col] + b[row, 0]
+
 
 # ANCHOR_END: broadcast_add_layout_tensor
 def main():

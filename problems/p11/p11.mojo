@@ -26,6 +26,15 @@ fn pooling(
     global_i = block_dim.x * block_idx.x + thread_idx.x
     local_i = thread_idx.x
     # FILL ME IN (roughly 10 lines)
+    shared[local_i] = a[global_i]
+    barrier()
+
+    local_sum = Scalar[dtype](0.0)
+    for offset in range(3):
+        position = local_i - 2 + offset
+        if 0 <= position < size:
+            local_sum += shared[position]
+    output[global_i] = local_sum
 
 
 # ANCHOR_END: pooling

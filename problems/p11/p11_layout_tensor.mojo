@@ -32,6 +32,16 @@ fn pooling[
     local_i = thread_idx.x
     # FIX ME IN (roughly 10 lines)
 
+    shared[local_i] = a[global_i]
+    barrier()
+
+    local_sum = Scalar[dtype](0.0)
+    for offset in range(3):
+        pos = local_i - 2 + offset
+        if 0 <= pos < size:
+            local_sum += rebind[Scalar[dtype]](shared[pos])
+    output[global_i] = local_sum
+
 
 # ANCHOR_END: pooling_layout_tensor
 

@@ -25,7 +25,25 @@ fn dot_product[
     size: UInt,
 ):
     # FILL ME IN (roughly 13 lines)
-    ...
+    shared = LayoutTensor[
+        dtype,
+        Layout.row_major(TPB),
+        MutableAnyOrigin,
+        address_space = AddressSpace.SHARED,
+    ].stack_allocation()
+
+    i = thread_idx.x
+
+    if i < size:
+        shared[i] = a[i] * b[i]
+
+    barrier()
+
+    if i == 0:
+        running_sum = Scalar[dtype](0.0)
+        for offset in range(size):
+            running_sum += rebind[Scalar[dtype]](shared[offset])
+        output[0] = running_sum
 
 
 # ANCHOR_END: dot_product_layout_tensor

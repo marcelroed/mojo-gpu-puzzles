@@ -28,7 +28,37 @@ fn axis_sum[
     global_i = block_dim.x * block_idx.x + thread_idx.x
     local_i = thread_idx.x
     batch = block_idx.y
+
     # FILL ME IN (roughly 15 lines)
+
+    cache = LayoutTensor[
+        dtype,
+        Layout.row_major(TPB),
+        MutableAnyOrigin,
+        address_space = AddressSpace.SHARED,
+    ].stack_allocation()
+
+    if local_i < size:
+        cache[local_i] = a[batch, local_i]
+    else:
+        cache[local_i] = 0
+
+    stride = block_dim.x // 2
+    while stride > 0:
+        var tmp: output.element_type = 0
+
+        if local_i < stride:
+            tmp = cache[local_i + stride]
+        barrier()
+
+        if local_i < stride:
+            cache[local_i] += tmp
+        barrier()
+
+        stride //= 2
+
+    if local_i == 0:
+        output[batch, 0] = cache[0]
 
 
 # ANCHOR_END: axis_sum

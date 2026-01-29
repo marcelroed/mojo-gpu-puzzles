@@ -26,7 +26,7 @@ fn softmax_gpu_kernel[
     input: LayoutTensor[dtype, layout, ImmutAnyOrigin],
 ):
     # FILL IN (roughly 31 lines)
-    ...
+    
 
 
 # ANCHOR_END: softmax_gpu_kernel
